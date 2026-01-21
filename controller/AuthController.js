@@ -1,9 +1,7 @@
 import User from "../models/userModal.js";
 import response from "../utils/responseHandler.js";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
-import bcrypt from "bcryptjs";
-import { sendResetPasswordLinkToEmail } from "../config/emailConfiguration.js";
+import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -106,7 +104,6 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-
 export const logout = async (req, res) => {
   try {
     return response(res, 200, "Logout successfully");
@@ -115,103 +112,7 @@ export const logout = async (req, res) => {
   }
 };
 
-export const forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) {
-      return response(res, 400, "No Account Found with this email");
-    }
 
-    const resetPasswordToken = crypto.randomBytes(20).toString("hex");
-    user.resetPasswordToken = resetPasswordToken;
-    user.resetPasswordExpires = new Date(Date.now() + 3600000);
-
-    await user.save();
-
-    try {
-      await sendResetPasswordLinkToEmail(email, resetPasswordToken);
-      return response(
-        res,
-        200,
-        "A password reset link has been sent to your email address",
-        process.env.NODE_ENV === "development"
-          ? { resetToken: resetPasswordToken }
-          : null
-      );
-    } catch (emailError) {
-      console.error("Email sending failed:", emailError);
-
-      // For testing purposes, return the token even if email fails
-      // if (process.env.NODE_ENV === "development") {
-      //   return response(
-      //     res,
-      //     200,
-      //     "Email service failed, but here's your reset token for testing",
-      //     {
-      //       resetToken: resetPasswordToken,
-      //       resetUrl: `${process.env.FRONTEND_URL}/reset-password/${resetPasswordToken}`,
-      //       expiresAt: user.resetPasswordExpires,
-      //     }
-      //   );
-      // }
-      user.resetPasswordToken = null;
-      user.resetPasswordExpires = null;
-      await user.save();
-
-      return response(
-        res,
-        500,
-        "Failed to send password reset email. Please try again later.",
-        { error: "Email service temporarily unavailable" }
-      );
-    }
-  } catch (error) {
-    return response(res, 500, "Internal server error", error.message);
-  }
-};
-
-export const resetPassword = async (req, res) => {
-  try {
-    const { token } = req.params;
-    console.log("Request body is getting printed", req.body);
-
-    const { newPassword, confirmPassword } = req.body;
-
-    if (newPassword !== confirmPassword) {
-      return response(res, 400, "Password does not match");
-    }
-
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      return response(
-        res,
-        400,
-        "Invalid or expiry reset password token present"
-      );
-    }
-
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedNewPassword;
-
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-
-    await user.save();
-
-    return response(
-      res,
-      200,
-      "Your password has been reset successfully. You can now log in with your new password."
-    );
-  } catch (error) {
-    return response(res, 500, "Internal server error", error.message);
-  }
-};
 
 export const checkAuth = async (req, res) => {
   try {
@@ -229,86 +130,5 @@ export const checkAuth = async (req, res) => {
     return response(res, 200, "User retrived successfully", user);
   } catch (error) {
     return response(res, 500, "Internal server error ", error.message);
-  }
-};
-
-// Update User Profile
-export const updateProfile = async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const { name, email, phone, imageUrl } = req.body;
-
-    // Check if user exists
-    const user = await User.findById(userId);
-    if (!user) {
-      return response(res, 404, "User not found");
-    }
-
-    // If email is being updated, check if it's already taken by another user
-    if (email && email !== user.email) {
-      const existingUser = await User.findOne({ email });
-      if (existingUser && existingUser._id.toString() !== userId) {
-        return response(res, 400, "Email is already in use by another account");
-      }
-    }
-
-    // Prepare update object with only provided fields
-    const updateData = {};
-    if (name !== undefined) updateData.name = name;
-    if (email !== undefined) updateData.email = email;
-    if (phone !== undefined) updateData.phone = phone;
-    if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
-
-    // Update user profile
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true, runValidators: true }
-    ).select("name email imageUrl phone role");
-
-    return response(res, 200, "Profile updated successfully", updatedUser);
-  } catch (error) {
-    console.error("Update profile error:", error);
-    return response(res, 500, "Internal server error", error.message);
-  }
-};
-
-// Change Password
-export const changePassword = async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const { currentPassword, newPassword } = req.body;
-
-    // Validate input
-    if (!currentPassword || !newPassword) {
-      return response(res, 400, "Current password and new password are required");
-    }
-
-    if (newPassword.length < 6) {
-      return response(res, 400, "New password must be at least 6 characters long");
-    }
-
-    // Find user with password
-    const user = await User.findById(userId);
-    if (!user) {
-      return response(res, 404, "User not found");
-    }
-
-    // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isCurrentPasswordValid) {
-      return response(res, 400, "Current password is incorrect");
-    }
-
-    // Hash new password
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password
-    await User.findByIdAndUpdate(userId, { password: hashedNewPassword });
-
-    return response(res, 200, "Password changed successfully");
-  } catch (error) {
-    console.error("Change password error:", error);
-    return response(res, 500, "Internal server error", error.message);
   }
 };

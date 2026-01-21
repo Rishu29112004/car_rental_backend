@@ -11,5 +11,6 @@ export const connectDb=async()=>{
           console.log("vehiql Db conected successfully");
     } catch (error) {
         console.error(" Error connecting to MongoDB:",error.message);
+        throw error;
     }
 }
