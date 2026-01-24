@@ -8,6 +8,7 @@ const authenticateUser = async (req, res, next) => {
     return response(res, 401, "Authorization header missing or invalid format");
   }
 
+
   const token = authHeader.split(" ")[1];
   if (!token) {
     return response(res, 401, "No token provided");
