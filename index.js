@@ -3,6 +3,7 @@ import cors from "cors";
 import { connectDb } from "./config/dbConnect.js";
 import authRouter from "./routes/authRouter.js";
 import dotenv from "dotenv";
+import carRouter from "./routes/carRouter.js";
 dotenv.config();
 
 const app = express();
@@ -24,8 +25,9 @@ app.use(cors(corsOption));
 app.use(express.json());
 
 app.use("/api/auth", authRouter);
+app.use("/api/cars", carRouter);
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 8080;
 const startServer = async () => {
   try {
     await connectDb();
