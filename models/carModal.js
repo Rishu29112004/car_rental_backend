@@ -75,6 +75,12 @@ const carSchema = new mongoose.Schema(
       enum: ["available", "booked", "inactive"],
       default: "available",
     },
+
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   { timestamps: true },
 );

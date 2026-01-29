@@ -10,6 +10,8 @@ export const addCar = async (req, res) => {
     const file = req.file;
     const carData = req.body;
 
+    console.log("check it out", req.id);
+
     if (!file) {
       return response(res, 400, "Car image is required");
     }
@@ -21,6 +23,7 @@ export const addCar = async (req, res) => {
     const newCar = await Car.create({
       ...carData,
       image: imageUrl,
+      userId: req.id, // Add the logged-in user's ID
     });
 
     return response(res, 201, "Car added successfully", newCar);
@@ -41,12 +44,12 @@ export const getCars = async (req, res) => {
 
     const filter = search
       ? {
-          $or: [
-            { brand: new RegExp(search, "i") },
-            { model: new RegExp(search, "i") },
-            { location: new RegExp(search, "i") },
-          ],
-        }
+        $or: [
+          { brand: new RegExp(search, "i") },
+          { model: new RegExp(search, "i") },
+          { location: new RegExp(search, "i") },
+        ],
+      }
       : {};
 
     const cars = await Car.find(filter).sort({ createdAt: -1 });
@@ -55,6 +58,36 @@ export const getCars = async (req, res) => {
   } catch (error) {
     console.error("Get cars error:", error);
     return response(res, 500, "Failed to fetch cars", {
+      error: error.message,
+    });
+  }
+};
+
+/* =========================
+   GET USER'S CARS (ADMIN - MY CARS)
+========================= */
+export const getMyCars = async (req, res) => {
+  try {
+    const userId = req.id;
+    const search = req.query.search || "";
+
+    const filter = {
+      userId: userId,
+      ...(search && {
+        $or: [
+          { brand: new RegExp(search, "i") },
+          { model: new RegExp(search, "i") },
+          { location: new RegExp(search, "i") },
+        ],
+      }),
+    };
+
+    const cars = await Car.find(filter).sort({ createdAt: -1 });
+
+    return response(res, 200, "Your cars fetched successfully", cars);
+  } catch (error) {
+    console.error("Get my cars error:", error);
+    return response(res, 500, "Failed to fetch your cars", {
       error: error.message,
     });
   }
@@ -89,16 +122,47 @@ export const getCarById = async (req, res) => {
 export const updateCar = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const updates = req.body;
+    const file = req.file;
 
-    if (!status) {
-      return response(res, 400, "Status is required");
+    const allowedUpdates = [
+      "brand",
+      "model",
+      "manufacturingYear",
+      "dailyPrice",
+      "category",
+      "transmission",
+      "fuelType",
+      "seats",
+      "location",
+      "description",
+      "status",
+    ];
+
+    const updateData = {};
+
+    Object.keys(updates).forEach((key) => {
+      if (allowedUpdates.includes(key)) {
+        updateData[key] = updates[key];
+      }
+    });
+
+    if (file) {
+      try {
+        const uploadedImage = await uploadFileToCloudinary(file);
+        updateData.image = uploadedImage.secure_url;
+      } catch (uploadError) {
+        return response(res, 500, "Failed to upload image", {
+          error: uploadError.message,
+        });
+      }
     }
 
+    // Attempt to update the car
     const updatedCar = await Car.findByIdAndUpdate(
       id,
-      { status },
-      { new: true },
+      updateData,
+      { new: true, runValidators: true }, // runValidators ensures the new data adheres to the schema
     );
 
     if (!updatedCar) {

@@ -2,6 +2,7 @@ import express from "express";
 import {
   addCar,
   getCars,
+  getMyCars,
   getCarById,
   updateCar,
   deleteCar,
@@ -20,11 +21,17 @@ carRouter.post(
   addCar,
 );
 
-carRouter.put("/update-car/:id", authenticateUser, updateCar);
+carRouter.patch(
+  "/update-car/:id",
+  authenticateUser,
+  multerMiddleware.single("image"),
+  updateCar,
+);
 carRouter.delete("/delete-car/:id", authenticateUser, deleteCar);
 
 // Public
 carRouter.get("/", getCars); //allcars
+carRouter.get("/my-cars", authenticateUser, getMyCars); // User's own cars
 carRouter.get("/:id", getCarById);
 
 export default carRouter;
