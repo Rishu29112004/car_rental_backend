@@ -18,7 +18,6 @@ app.use(
   }),
 );
 
-app.use(cors(corsOption));
 app.use(express.json());
 
 app.use("/api/auth", authRouter);
