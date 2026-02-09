@@ -4,43 +4,33 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Cloudinary configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Upload file from memory buffer to Cloudinary
 const uploadFileToCloudinary = (file) => {
   return new Promise((resolve, reject) => {
+    if (!file || !file.buffer) {
+      return reject(new Error("File must have a buffer"));
+    }
+
+    const base64Data = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
     const options = {
       resource_type: file.mimetype.startsWith("video") ? "video" : "image",
     };
 
-    // Check if file has path (disk storage) or buffer (memory storage)
-    if (file.path) {
-      // File saved to disk
-      cloudinary.uploader.upload_large(file.path, options, (error, result) => {
-        if (error) {
-          return reject(error);
-        }
-        resolve(result);
-      });
-    } else if (file.buffer) {
-      // File in memory - convert buffer to base64
-      const base64Data = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-      cloudinary.uploader.upload(base64Data, options, (error, result) => {
-        if (error) {
-          return reject(error);
-        }
-        resolve(result);
-      });
-    } else {
-      reject(new Error("File must have either path or buffer"));
-    }
+    cloudinary.uploader.upload(base64Data, options, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
   });
 };
 
-const storage = multer.memoryStorage();
-const multerMiddleware = multer({ storage });
+// Multer memory storage for serverless
+const multerMiddleware = multer({ storage: multer.memoryStorage() });
 
 export { multerMiddleware, uploadFileToCloudinary };
