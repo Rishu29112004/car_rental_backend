@@ -11,24 +11,34 @@ import bookingRouter from "./routes/userBooking.js";
 dotenv.config();
 
 const app = express();
-
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
-  })
+  }),
 );
+console.log(process.env.FRONTEND_URL)
 
 app.use(express.json());
 
-// Routes
 app.use("/api/auth", authRouter);
 app.use("/api/cars", carRouter);
 app.use("/api/dashboard", authDashboard);
+
 app.use("/api/profile", profileRouter);
+
 app.use("/api", bookingRouter);
 
-// DB Connect
-await connectDb();
-
-export default app;
+const PORT = process.env.PORT || 8080;
+const startServer = async () => {
+  try {
+    await connectDb();
+    app.listen(PORT, () => {
+      console.log(`server is running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.log("Failed to connect to mongoDB. server not started", error);
+    process.exit(1);
+  }
+};
+startServer();
