@@ -8,6 +8,7 @@ dotenv.config();
 export const register = async (req, res) => {
   try {
     const { email, name, password } = req.body;
+    console.log("user")
 
     const normalizedEmail = email.toLowerCase().trim();
 
