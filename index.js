@@ -8,24 +8,15 @@ import authDashboard from "./routes/authDashboard.js";
 import profileRouter from "./routes/userRouter.js";
 import bookingRouter from "./routes/userBooking.js";
 
-
 dotenv.config();
 
 const app = express();
-
-const allowedOrigins = ["http://localhost:3000"];
-
-const corsOption = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-};
-
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  }),
+);
 
 app.use(cors(corsOption));
 app.use(express.json());
@@ -34,10 +25,9 @@ app.use("/api/auth", authRouter);
 app.use("/api/cars", carRouter);
 app.use("/api/dashboard", authDashboard);
 
-app.use("/api/profile", profileRouter)
+app.use("/api/profile", profileRouter);
 
 app.use("/api", bookingRouter);
-
 
 const PORT = process.env.PORT || 8080;
 const startServer = async () => {
