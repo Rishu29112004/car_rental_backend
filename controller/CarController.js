@@ -13,7 +13,6 @@ export const addCar = async (req, res) => {
     const carData = req.body;
     console.log("check the carData",carData)
      const userId = req.id;
-     console.log("check the user id",userId)
 
      console.log("is file getting read at here or not",file)
 
